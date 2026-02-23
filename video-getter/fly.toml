@@ -1,0 +1,28 @@
+# fly.toml app configuration file generated for youtube-research-ingest on 2026-02-21T22:56:49+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'youtube-research-ingest'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  CRAWL_PAGE_SIZE = '50'
+  INTERVAL_MINUTES = '1440'
+  MAX_DAILY_QUOTA_UNITS = '9500'
+  RUN_ONCE = 'true'
+  SEARCH_LANGUAGE = 'en'
+  SEARCH_PAGE_SIZE = '50'
+  SEARCH_REGION_CODE = 'US'
+
+[processes]
+  app = 'npm start'
+
+[[vm]]
+  memory = '256mb'
+  cpus = 1
+  memory_mb = 256
+

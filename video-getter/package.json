@@ -1,0 +1,21 @@
+{
+  "name": "youtube-research-ingest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YouTube metadata ingestion worker (YouTube Data API -> Supabase)",
+  "type": "module",
+  "scripts": {
+    "start": "node src/worker.js",
+    "ingest:once": "RUN_ONCE=true node src/worker.js",
+    "ingest:loop": "RUN_ONCE=false node src/worker.js",
+    "discover:channels": "node src/discover-channels.js",
+    "fly:deploy:scheduled": "bash scripts/fly-deploy-scheduled.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "googleapis": "^152.0.0"
+  }
+}
