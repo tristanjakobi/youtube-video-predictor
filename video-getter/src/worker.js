@@ -7,6 +7,7 @@ const MIN_UNITS_FOR_SEARCH_STEP = 102;
 const MIN_UNITS_FOR_CRAWL_STEP = 3;
 const DEFAULT_API_MAX_ATTEMPTS = 5;
 const DEFAULT_API_RETRY_BASE_MS = 800;
+const SHORT_MAX_DURATION_SECONDS = 180;
 
 class BudgetLimitReachedError extends Error {
   constructor(message) {
@@ -73,6 +74,31 @@ function parseCount(value) {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseIso8601DurationToSeconds(duration) {
+  if (!duration || typeof duration !== "string") {
+    return null;
+  }
+
+  const match = duration.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+  if (!match) {
+    return null;
+  }
+
+  const days = Number(match[1] || 0);
+  const hours = Number(match[2] || 0);
+  const minutes = Number(match[3] || 0);
+  const seconds = Number(match[4] || 0);
+
+  return days * 86400 + hours * 3600 + minutes * 60 + seconds;
+}
+
+function isLikelyShortTitle(title) {
+  if (!title) {
+    return false;
+  }
+  return /(^|\W)#?shorts(\W|$)/i.test(title);
 }
 
 function remainingBudget(budget) {
@@ -278,7 +304,7 @@ async function fetchVideoDetails(youtube, videoIds, budget) {
       label: "videos.list",
       request: () =>
         youtube.videos.list({
-          part: ["snippet", "statistics"],
+          part: ["snippet", "statistics", "contentDetails"],
           id: idChunk,
           maxResults: 50,
         }),
@@ -295,6 +321,7 @@ async function fetchVideoDetails(youtube, videoIds, budget) {
         viewCount: parseCount(item.statistics?.viewCount),
         likeCount: parseCount(item.statistics?.likeCount),
         commentCount: parseCount(item.statistics?.commentCount),
+        durationSeconds: parseIso8601DurationToSeconds(item.contentDetails?.duration),
       });
     }
   }
@@ -341,17 +368,29 @@ function buildVideoRows(videoIds, detailMap, fallbackMap, fetchedAt) {
   for (const videoId of videoIds) {
     const details = detailMap.get(videoId);
     const fallback = fallbackMap.get(videoId) || {};
+    const title = details?.title || fallback.title || null;
+    const durationSeconds = Number.isFinite(details?.durationSeconds)
+      ? details.durationSeconds
+      : null;
+    const isShort =
+      durationSeconds !== null
+        ? durationSeconds <= SHORT_MAX_DURATION_SECONDS
+        : isLikelyShortTitle(title)
+          ? true
+          : null;
 
     rows.push({
       video_id: videoId,
       channel_id: details?.channelId || fallback.channelId || null,
       channel_title: details?.channelTitle || fallback.channelTitle || null,
-      title: details?.title || fallback.title || null,
+      title,
       published_at: details?.publishedAt || fallback.publishedAt || null,
       thumbnail_url: details?.thumbnailUrl || fallback.thumbnailUrl || null,
       view_count: details?.viewCount || 0,
       like_count: details?.likeCount || 0,
       comment_count: details?.commentCount || 0,
+      duration_seconds: durationSeconds,
+      is_short: isShort,
       fetched_at: fetchedAt,
     });
   }

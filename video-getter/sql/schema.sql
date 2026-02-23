@@ -8,10 +8,15 @@ create table if not exists public.youtube_videos (
   view_count bigint not null default 0,
   like_count bigint not null default 0,
   comment_count bigint not null default 0,
+  duration_seconds integer,
+  is_short boolean,
   fetched_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.youtube_videos add column if not exists duration_seconds integer;
+alter table public.youtube_videos add column if not exists is_short boolean;
 
 create index if not exists youtube_videos_channel_id_idx
   on public.youtube_videos (channel_id);
